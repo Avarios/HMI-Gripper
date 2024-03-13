@@ -1,0 +1,58 @@
+	teemuatlut/TMCStepper@^0.7.3
+	stan-reifel/SpeedyStepper@^1.0.0
+
+#include <SpeedyStepper.h> //Simple & good stepper library, get it.
+#include <SoftwareSerial.h>
+#include <TMCStepper.h>
+
+#define DIR_PIN D1          // Direction
+#define STEP_PIN D2         // Step
+#define DRIVER_ADDRESS 0b00 // TMC2209 Driver address according to MS1 and MS2
+SoftwareSerial swSer(D6, D7);
+#define R_SENSE 0.11f // Match to your driver
+                      // SilentStepStick series use 0.11
+                      // UltiMachine Einsy and Archim2 boards use 0.2
+                      // Panucatt BSD2660 uses 0.1
+                      // Watterott TMC5160 uses 0.075
+
+bool shaft = false; // ONLY NEEDED FOR CHANGING DIRECTION VIA UART, NO NEED FOR DIR PIN FOR THIS
+
+TMC2209Stepper driver(&swSer, R_SENSE, DRIVER_ADDRESS);
+
+SpeedyStepper stepper;
+
+void setup()
+{
+
+    stepper.connectToPins(STEP_PIN, DIR_PIN); // INITIALIZE SpeedyStepper
+    // swSer.begin(115200); // INITIALIZE UART TMC2209
+    Serial.begin(9600);
+    delay(500);
+    Serial.println(F("Serial Initialized"));
+
+    driver.begin(); // Initialize driver
+
+    driver.toff(5); // Enables driver in software
+
+    driver.rms_current(1200); // Set motor RMS current
+    driver.microsteps(2);    // Set microsteps to 1/2
+
+    driver.pwm_autoscale(true);  // Needed for stealthChop
+    driver.en_spreadCycle(true); // false = StealthChop / true = SpreadCycle
+
+    stepper.setCurrentPositionInSteps(0);                  // Set zero position
+    stepper.setSpeedInStepsPerSecond(1200);                 // Set Speed
+    stepper.setAccelerationInStepsPerSecondPerSecond(1200); // Set acceleration, smaller value for super smooth direction changing
+}
+
+void loop()
+{
+    if (shaft)
+    {
+        stepper.moveRelativeInSteps(-400);
+    }
+    else {
+        stepper.moveRelativeInSteps(400);
+    }
+    shaft = !shaft;
+}
