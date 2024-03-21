@@ -1,121 +1,120 @@
-#include <SoftwareSerial.h>
-#include "ESP8266_ISR_Servo.h"
+#include <WiFi.h>
+#include <Servo.h>
 #include <EEPROM.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
-#define SERVO_PIN D7 // Direction
-#define PIN_POTENTIOMETER A0
-#define BUTTON_PIN D1
-#define MIN_MICROS 544 // 800
-#define MAX_MICROS 2450
-#define NUM_SERVOS 1
-#define EEPROM_SIZE 8
-#define TIMER_INTERRUPT_DEBUG       0
-#define ISR_SERVO_DEBUG             0
+const char *ssid = "Adfnet";                   // "HMIGripper";
+const char *password = "33394151923058759658"; // "123456789";
 
-int pressCounter = 0;
-int angleLow;
-int angleHigh;
-bool buttonPressed = false;
-bool tooglePos = false;
+const int servoHertz = 2000;
+const int minUs = 1000;
+const int maxUs = 2000;
 
-typedef struct
+Servo myservo;
+int pos = 0; // variable to store the servo position
+// Recommended PWM GPIO pins on the ESP32 include 2,4,12-19,21-23,25-27,32-33
+int servoPin = 13;
+
+AsyncWebServer server(80);
+
+const char *PARAM_MESSAGE = "message";
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html><head>
+  <title>ESP Input Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head><body>
+  <form action="/get">
+    input1: <input type="text" name="input1">
+    <input type="submit" value="Submit">
+  </form><br>
+  <form action="/get">
+    input2: <input type="text" name="input2">
+    <input type="submit" value="Submit">
+  </form><br>
+  <form action="/get">
+    input3: <input type="text" name="input3">
+    <input type="submit" value="Submit">
+  </form>
+</body></html>)rawliteral";
+
+void notFound(AsyncWebServerRequest *request)
 {
-  int servoIndex;
-  uint8_t servoPin;
-} ISR_servo_t;
+    request->send(404, "text/plain", "Not found");
+}
 
-ISR_servo_t ISR_servo[NUM_SERVOS] =
-    {
-        {-1, D7},
-};
-
-IRAM_ATTR void button_press()
+void setup_web()
 {
-  buttonPressed = true;
-  int analogValue = analogRead(PIN_POTENTIOMETER);
-  Serial.print("Button Press Counter:");
-  Serial.print(pressCounter);
-  Serial.println("");
-  // scales it to use it with the servo (value between 0 and 180)
-  int angle = map(analogValue, 7, 1024, 0, 90);
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "text/plain", "Hello world"); });
 
-  switch (pressCounter)
-  {
-  case 0:
-    pressCounter = 1;
-    break;
-  case 1:
-    Serial.print("Saveing Wide Angle Position:");
-    Serial.print(angle);
-    Serial.println("");
-    EEPROM.write(0, angle);
-    angleHigh = angle;
-    pressCounter = 2;
-    break;
-  case 2:
-    Serial.print("Saveing Low Angle Position:");
-    Serial.print(angle);
-    Serial.println("");
-    EEPROM.write(1, angle);
-    angleLow = angle;
-    buttonPressed = false;
-    pressCounter = 0;
-    EEPROM.commit();
-    break;
-  }
+    server.on("/set_servo", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+        int pos = request->arg("pos").toInt();
+        myservo.write(pos);
+        request->send(200, "text/plain", "Servo position set to " + String(pos)); });
+
+    server.onNotFound(notFound);
+
+    // Send web page with input fields to client
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send_P(200, "text/html", index_html); });
+
+    // Send a GET request to <ESP_IP>/get?input1=<inputMessage>
+    server.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+    String inputMessage;
+    String inputParam;
+    // GET input1 value on <ESP_IP>/get?input1=<inputMessage>
+    if (request->hasParam(PARAM_INPUT_1)) {
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      inputParam = PARAM_INPUT_1;
+    }
+    // GET input2 value on <ESP_IP>/get?input2=<inputMessage>
+    else if (request->hasParam(PARAM_INPUT_2)) {
+      inputMessage = request->getParam(PARAM_INPUT_2)->value();
+      inputParam = PARAM_INPUT_2;
+    }
+    // GET input3 value on <ESP_IP>/get?input3=<inputMessage>
+    else if (request->hasParam(PARAM_INPUT_3)) {
+      inputMessage = request->getParam(PARAM_INPUT_3)->value();
+      inputParam = PARAM_INPUT_3;
+    }
+    else {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+    Serial.println(inputMessage);
+    request->send(200, "text/html", "HTTP GET request sent to your ESP on input field (" 
+                                     + inputParam + ") with value: " + inputMessage +
+                                     "<br><a href=\"/\">Return to Home Page</a>"); });
+    server.onNotFound(notFound);
+    server.begin();
 }
 
 void setup()
 {
-  EEPROM.begin(EEPROM_SIZE);
-  angleLow = EEPROM.read(0);
-  angleHigh = EEPROM.read(1);
-  Serial.begin(9600);
-  Serial.println("\nStarting");
-  pinMode(BUTTON_PIN, INPUT);
+    EEPROM.begin(8);
 
-  for (int index = 0; index < 1; index++)
-  {
-    ISR_servo[index].servoIndex = ISR_Servo.setupServo(ISR_servo[index].servoPin, MIN_MICROS, MAX_MICROS);
+    Serial.begin(9600);
+    // WiFi.softAP(ssid, password);
+    // WiFi.softAPIP();
+    // Serial.print("AP IP Adress ");
+    // Serial.println(WiFi.softAPIP());
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(1000);
+        Serial.println("Connecting to WiFi...");
+    }
+    Serial.print("Connected to WiFi with IP: ");
+    Serial.println(WiFi.localIP());
 
-    if (ISR_servo[index].servoIndex != -1)
-      Serial.println("Setup OK Servo index = " + String(ISR_servo[index].servoIndex));
-    else
-      Serial.println("Setup Failed Servo index = " + String(ISR_servo[index].servoIndex));
-  }
-  Serial.print(" Angle low: ");
-  Serial.print(angleLow);
-  Serial.print(" Angle high: ");
-  Serial.print(angleHigh);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), button_press, FALLING);
+    myservo.attach(servoPin);
+    setup_web();
 }
 
 void loop()
 {
-  if (buttonPressed)
-  {
-    int angle = map(analogRead(PIN_POTENTIOMETER), 7, 1024, 0, 90);
-    ISR_Servo.setPosition(ISR_servo[0].servoIndex, angle);
-  }
-  if (!buttonPressed)
-  {
-    int pos = ISR_Servo.getPosition(ISR_servo[0].servoIndex);
-    Serial.print(" Angle low: ");
-    Serial.print(angleLow);
-    Serial.print(" Angle high: ");
-    Serial.print(angleHigh);
-    Serial.print(" Position: ");
-    Serial.print(pos);
-    Serial.println("");
-    if (tooglePos)
-    {
-      ISR_Servo.setPosition(ISR_servo[0].servoIndex, angleHigh);
-    } else {
-      ISR_Servo.setPosition(ISR_servo[0].servoIndex, angleLow);
-    }
-    tooglePos = !tooglePos;
-    delay(3000);
-  }
-
-  delay(100);
 }
