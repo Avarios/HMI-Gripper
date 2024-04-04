@@ -10,14 +10,17 @@ const char *password = "33394151923058759658"; // "123456789";
 const int servoHertz = 2000;
 const int minUs = 1000;
 const int maxUs = 2000;
-const int servoPin = 13;
+const int servoPin = 22;
 const int digitalIn1 = 15;
-const int digitalIn2 = 18;
+const int digitalIn2 = 2;
 
 Servo myservo;
 int minPos = 0;   // variable to store the servo position
 int maxPos = 180; // variable to store the servo position
 int lastVal = 0;
+IPAddress IP(192, 168, 1, 1);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 255, 0);
 
 // EEPROM address where the data is stored
 // Recommended PWM GPIO pins on the ESP32 include 2,4,12-19,21-23,25-27,32-33
@@ -98,6 +101,13 @@ const char HTML[] PROGMEM = "<!DOCTYPE html>\n"
 
 void init_wifi()
 {
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP("HMIGripper", "qwasyx#1");
+  Serial.println("IP addr#495 ");
+  Serial.println(WiFi.softAPIP().toString());
+  Serial.println("Gateway address: ");
+  Serial.println(WiFi.softAPIP().toString());
+  /*
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -106,6 +116,7 @@ void init_wifi()
   }
   Serial.print("Connected to WiFi with IP: ");
   Serial.println(WiFi.localIP());
+  */
 }
 
 void init_EEPROM()
@@ -170,11 +181,13 @@ void setup_webserver()
 
 void IRAM_ATTR toggleMin()
 {
+  //Serial.println("toogle min");
   myservo.write(minPos);
 }
 
 void IRAM_ATTR toogleMax()
 {
+  //Serial.println("toogle max");
   myservo.write(maxPos);
 }
 
@@ -185,8 +198,10 @@ void setup()
   init_EEPROM();
   setup_webserver();
   myservo.attach(servoPin);
-  attachInterrupt(digitalPinToInterrupt(digitalIn1),toggleMin,RISING);
-  attachInterrupt(digitalPinToInterrupt(digitalIn2),toogleMax,RISING);
+  pinMode(digitalIn1,INPUT_PULLUP);
+  pinMode(digitalIn2,INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(digitalIn1), toggleMin, RISING);
+  attachInterrupt(digitalPinToInterrupt(digitalIn2), toogleMax, RISING);
 }
 
 void loop()
