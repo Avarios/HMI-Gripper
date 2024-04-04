@@ -168,6 +168,16 @@ void setup_webserver()
   server.begin();
 }
 
+void IRAM_ATTR toggleMin()
+{
+  myservo.write(minPos);
+}
+
+void IRAM_ATTR toogleMax()
+{
+  myservo.write(maxPos);
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -175,6 +185,8 @@ void setup()
   init_EEPROM();
   setup_webserver();
   myservo.attach(servoPin);
+  attachInterrupt(digitalPinToInterrupt(digitalIn1),toggleMin,RISING);
+  attachInterrupt(digitalPinToInterrupt(digitalIn2),toogleMax,RISING);
 }
 
 void loop()
