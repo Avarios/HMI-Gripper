@@ -24,9 +24,9 @@
   <p>Position: <span id="servoPos"></span></p>
   <p><span id="result"></span></p>
   <input type="range" min="0" max="180" class="slider" id="servoSlider" onchange="servo(this.value)" />
-  <button>Set Min Position</button>
-  <button>Set max Position</button>
-  <button>Grab !</button>
+  <button onclick="setMinimun()">Set Min Position</button>
+  <button onclick="setMaximum()">Set max Position</button>
+  <button onclick="grab()">Grab !</button>
   <script>
     var slider = document.getElementById("servoSlider");
     var servoP = document.getElementById("servoPos");
@@ -38,27 +38,29 @@
     $.ajaxSetup({ timeout: 1000 });
 
     function servo(pos) {
-      $.post(`/set?position=${pos}`, ).done(res => {
+      $.get(`/set?position=${pos}`, ).done(res => {
         console.log(res);
       }) 
     }
 
     function setMinimun() {
-      const val = $("#servoSlider").val;
-      $.post(`/set?min=${val}`).done(res => {
+      const val = $("#servoSlider").val();
+      console.log(val);
+      $.get(`/set?min=${val}`).done(res => {
         $('#result').text("Minimal Position set");
       }) 
     }
 
     function setMaximum() {
-      const val = $("#servoSlider").val;
-      $.post(`/set?max=${val}`).done(res => {
+      const val = $("#servoSlider").val();
+      console.log(val);
+      $.get(`/set?max=${val}`).done(res => {
         $('#result').text("Maximal Position set");
       }) 
     }
 
     function grab() {
-      $.post(`/grab`).done(res => {
+      $.get(`/grab`).done(res => {
         console.log(res) 
       }) 
     }
