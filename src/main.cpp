@@ -102,8 +102,8 @@ const char HTML[] PROGMEM = "<!DOCTYPE html>\n"
 void init_wifi()
 {
   WiFi.mode(WIFI_AP);
-  WiFi.softAP("HMIGripper", "qwasyx#1");
-  Serial.println("IP addr#495 ");
+  WiFi.softAP("HMIGripper", "INSERT_PASS_HERE");
+  Serial.println("IP address ");
   Serial.println(WiFi.softAPIP().toString());
   Serial.println("Gateway address: ");
   Serial.println(WiFi.softAPIP().toString());
