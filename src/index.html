@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <style>
+    body {
+      text-align: center;
+      font-family: "Trebuchet MS", Arial;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .slider {
+      width: 300px;
+    }
+  </style>
+  <script src="/jquery.min.js"></script>
+</head>
+
+<body>
+  <h1>Setup HMI Grabber Position</h1>
+  <p>Position: <span id="servoPos"></span></p>
+  <p><span id="result"></span></p>
+  <input type="range" min="0" max="180" class="slider" id="servoSlider" onchange="servo(this.value)" />
+  <button onclick="setMinimun()">Set Min Position</button>
+  <button onclick="setMaximum()">Set max Position</button>
+  <button onclick="grab()">Grab !</button>
+  <script>
+    var slider = document.getElementById("servoSlider");
+    var servoP = document.getElementById("servoPos");
+    servoP.innerHTML = slider.value;
+    slider.oninput = function () {
+      slider.value = this.value;
+      servoP.innerHTML = this.value;
+    }
+    $.ajaxSetup({ timeout: 1000 });
+
+    function servo(pos) {
+      $.get(`/set?position=${pos}`, ).done(res => {
+        console.log(res);
+      }) 
+    }
+
+    function setMinimun() {
+      const val = $("#servoSlider").val();
+      console.log(val);
+      $.get(`/set?min=${val}`).done(res => {
+        $('#result').text("Minimal Position set");
+      }) 
+    }
+
+    function setMaximum() {
+      const val = $("#servoSlider").val();
+      console.log(val);
+      $.get(`/set?max=${val}`).done(res => {
+        $('#result').text("Maximal Position set");
+      }) 
+    }
+
+    function grab() {
+      $.get(`/grab`).done(res => {
+        console.log(res) 
+      }) 
+    }
+
+  </script>
+</body>
+
+</html>
