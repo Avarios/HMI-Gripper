@@ -389,12 +389,22 @@ void setup_webserver()
 {
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/index.html", String(), false, processor); });
+            {
+              if (!request->authenticate(http_username, http_password))
+              {
+                return request->requestAuthentication();
+              }
+              request->send(SPIFFS, "/index.html", String(), false, processor);
+            });
   server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(SPIFFS, "/jquery.min.js", String()); });
 
   server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+              if(!request->authenticate(http_username, http_password))
+              {
+                return request->requestAuthentication();
+              }
               Serial.println("hit set route with params" + request->params());
               if (request->hasParam("position"))
               {
@@ -432,13 +442,13 @@ void setup_webserver()
 }
 void IRAM_ATTR toggleMin()
 {
-  // Serial.println("toogle min");
+  ets_printf("toggle min\n");
   myservo.write(minPos);
 }
 
 void IRAM_ATTR toogleMax()
 {
-  // Serial.println("toogle max");
+  ets_printf("toggle max\n");
   myservo.write(maxPos);
 }
 void setup()
@@ -473,23 +483,4 @@ void loop()
     delay(100);
     ESP.restart();
   }
-
-  /*
-  Millis = millis();
-  if (Millis - previousMillis >= 1000)
-  {
-    previousMillis = Millis;
-    if(led)
-    {
-      digitalWrite(ledPin, HIGH);
-      led = false;
-    }
-    else
-    {
-      digitalWrite(ledPin, LOW);
-      led = true;
-    }
-  }
-  */
-
-} // loop end
+}
