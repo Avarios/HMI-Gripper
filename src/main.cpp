@@ -367,22 +367,22 @@ void setupAsyncServer()
 
 void setup_wifi()
 {
+  WiFi.setHostname("gripper");
   WiFi.mode(WIFI_AP);
-  WiFi.softAP("HMIGripper", "qwasyx#1");
+  WiFi.softAP(ssid, password,1,ssid_hidden);
   Serial.println("IP address ");
   Serial.println(WiFi.softAPIP().toString());
   Serial.println("Gateway address: ");
   Serial.println(WiFi.softAPIP().toString());
-  /*
-  WiFi.begin(ssid, password);
+
+  /* WiFi.begin("", "");
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(1000);
     Serial.println("Connecting to WiFi...");
   }
   Serial.print("Connected to WiFi with IP: ");
-  Serial.println(WiFi.localIP());
-  */
+  Serial.println(WiFi.localIP()); */
 }
 
 void setup_webserver()
@@ -393,7 +393,7 @@ void setup_webserver()
               if (!request->authenticate(http_username, http_password))
               {
                 return request->requestAuthentication();
-              }
+              } 
               request->send(SPIFFS, "/index.html", String(), false, processor);
             });
   server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
